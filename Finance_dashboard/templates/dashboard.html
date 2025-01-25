@@ -1,0 +1,119 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+  <h1>Tableau de bord des Finances Personnelles</h1>
+
+  <!-- Affichage des messages flash -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <ul class="flashes">
+        {% for category, message in messages %}
+          <li class="{{ category }}">{{ message }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  {% endwith %}
+
+  <!-- Section des graphiques -->
+  <div class="charts">
+    <h2>Revenus et Dépenses</h2>
+    <div class="chart-container">
+      <canvas id="transactionChart" width="400" height="200"></canvas>
+    </div>
+  </div>
+
+  <!-- Section des transactions -->
+  <div class="transactions">
+    <h2>Liste des Transactions</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Nom</th>
+          <th>Montant</th>
+          <th>Type</th>
+          <th>Devise</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for transaction in transactions %}
+          <tr>
+            <td>{{ transaction.id }}</td>
+            <td>{{ transaction.name }}</td>
+            <td>{{ transaction.amount }} {{ transaction.currency }}</td>
+            <td>{{ transaction.transaction_type }}</td>
+            <td>{{ transaction.currency }}</td>
+            <td>{{ transaction.date }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Formulaire pour ajouter une nouvelle transaction -->
+  <div class="add-transaction">
+    <h3>Ajouter une Nouvelle Transaction</h3>
+    <a href="{{ url_for('add_transaction') }}">Ajouter une transaction</a>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    // Données pour les graphiques
+    const transactions = {{ transactions|tojson }};
+    const incomeData = [];
+    const expenseData = [];
+    const labels = [];
+
+    transactions.forEach(transaction => {
+      labels.push(transaction.date);
+      if (transaction.transaction_type === 'income') {
+        incomeData.push(transaction.amount);
+        expenseData.push(0);
+      } else {
+        incomeData.push(0);
+        expenseData.push(transaction.amount);
+      }
+    });
+
+    // Création du graphique avec Chart.js
+    const ctx = document.getElementById('transactionChart').getContext('2d');
+    const transactionChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Revenus',
+          data: incomeData,
+          borderColor: 'green',
+          backgroundColor: 'rgba(0, 255, 0, 0.2)',
+          fill: true,
+        }, {
+          label: 'Dépenses',
+          data: expenseData,
+          borderColor: 'red',
+          backgroundColor: 'rgba(255, 0, 0, 0.2)',
+          fill: true,
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          x: {
+            title: {
+              display: true,
+              text: 'Date'
+            }
+          },
+          y: {
+            title: {
+              display: true,
+              text: 'Montant'
+            },
+            beginAtZero: true
+          }
+        }
+      }
+    });
+  </script>
+{% endblock %}
