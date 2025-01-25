@@ -1,6 +1,3 @@
-### **`README.md`**
-
-```markdown
 # Suivi des Finances Personnelles
 
 ## Description
@@ -28,7 +25,7 @@ Ce projet permet de suivre les finances personnelles en enregistrant les transac
 - MariaDB
 - Node.js (si nécessaire pour les graphiques frontend)
 
-### Étapes d'installation
+## Étapes d'installation ##
 
 1. **Cloner le dépôt** :
    ```bash
