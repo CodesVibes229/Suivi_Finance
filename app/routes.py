@@ -4,8 +4,13 @@ from .forms import TransactionForm
 from .models import db, Transaction
 from .utils import get_exchange_rate
 
-app = Flask(__name__)
-
+# Route pour la page d'accueil (Dashboard)
+@app.route('/')
+def index():
+    # Récupérer toutes les transactions depuis la base de données
+    transactions = Transaction.query.all()
+    # Passer les transactions à la page d'accueil (dashboard)
+    return render_template('dashboard.html', transactions=transactions)
 
 # Route pour obtenir toutes les transactions (API GET)
 @app.route('/api/transactions', methods=['GET'])
@@ -13,6 +18,13 @@ def get_transactions():
     transactions = Transaction.query.all()
     return jsonify([transaction.to_dict() for transaction in transactions])
 
+# Route pour obtenir les données des transactions pour le graphique (API GET)
+@app.route('/api/chart_data', methods=['GET'])
+def chart_data():
+    # Récupérer toutes les transactions depuis la base de données
+    transactions = Transaction.query.all()
+    # Retourner les données des transactions formatées pour le graphique
+    return jsonify([transaction.to_chart_data() for transaction in transactions])
 
 # Route pour obtenir le taux de change (API GET)
 @app.route('/api/exchange_rate', methods=['GET'])
@@ -21,7 +33,6 @@ def exchange_rate():
     target_currency = request.args.get('target', 'EUR')
     rate = get_exchange_rate(base_currency, target_currency)
     return jsonify({'rate': rate})
-
 
 # Route pour ajouter une transaction (Formulaire POST)
 @app.route('/add_transaction', methods=['GET', 'POST'])
@@ -53,7 +64,6 @@ def add_transaction():
         return redirect(url_for('add_transaction'))  # Redirige vers la page de création (ou index)
 
     return render_template('add_transaction.html', form=form)
-
 
 if __name__ == '__main__':
     app.run(debug=True)

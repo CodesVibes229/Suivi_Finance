@@ -25,7 +25,7 @@
   <!-- Section des transactions -->
   <div class="transactions">
     <h2>Liste des Transactions</h2>
-    <table>
+    <table class="table table-bordered">
       <thead>
         <tr>
           <th>ID</th>
@@ -54,7 +54,7 @@
   <!-- Formulaire pour ajouter une nouvelle transaction -->
   <div class="add-transaction">
     <h3>Ajouter une Nouvelle Transaction</h3>
-    <a href="{{ url_for('add_transaction') }}">Ajouter une transaction</a>
+    <a href="{{ url_for('add_transaction') }}" class="btn btn-primary">Ajouter une transaction</a>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -65,6 +65,7 @@
     const expenseData = [];
     const labels = [];
 
+    // Organiser les données pour le graphique
     transactions.forEach(transaction => {
       labels.push(transaction.date);
       if (transaction.transaction_type === 'income') {
@@ -108,7 +109,7 @@
           y: {
             title: {
               display: true,
-              text: 'Montant'
+              text: 'Montant (€)'
             },
             beginAtZero: true
           }

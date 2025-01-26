@@ -1,5 +1,10 @@
 from datetime import datetime
-from . import db
+from flask_sqlalchemy import SQLAlchemy
+from flask_login import UserMixin
+
+# Instantiation de la base de données
+db = SQLAlchemy()
+
 
 # Modèle pour la table 'transactions'
 class Transaction(db.Model):
@@ -28,6 +33,24 @@ class Transaction(db.Model):
             'date': self.date.strftime('%Y-%m-%d')  # Formater la date en string
         }
 
-# Créer la base de données si elle n'existe pas encore
-def create_db():
-    db.create_all()
+    # Méthode pour convertir un objet Transaction en dictionnaire pour le graphique
+    def to_chart_data(self):
+        return {
+            'date': self.date.strftime('%Y-%m-%d'),
+            'amount': float(self.amount),  # Conversion pour s'assurer que c'est un float
+            'type': self.transaction_type,
+            'currency': self.currency
+        }
+
+
+# Modèle pour la table 'users' (pour gérer la connexion avec Flask-Login)
+class User(db.Model, UserMixin):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(100), unique=True, nullable=False)
+    password = db.Column(db.String(100), nullable=False)
+
+    def __repr__(self):
+        return f'<User {self.username}>'
+
+# N'oublie pas d'importer cette classe dans le fichier run.py si tu l'utilises pour gérer la connexion
+
