@@ -1,16 +1,15 @@
 from datetime import datetime
-from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
+from werkzeug.security import generate_password_hash, check_password_hash
+from app.extensions import db  # Importe `db` depuis extensions.py
 
-# Instantiation de la base de données
-db = SQLAlchemy()
-
+# Modèle pour la table 'transactions'
 
 # Modèle pour la table 'transactions'
 class Transaction(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
-    amount = db.Column(db.Numeric(10, 2), nullable=False)  # Montant de la transaction
+    amount = db.Column(db.Float, nullable=False)  # Montant de la transaction
     transaction_type = db.Column(db.String(10), nullable=False)  # Type de la transaction (revenu ou dépense)
     currency = db.Column(db.String(3), nullable=False)  # Devise de la transaction (ex. USD, EUR)
     date = db.Column(db.Date, nullable=False)  # Date de la transaction
@@ -47,10 +46,13 @@ class Transaction(db.Model):
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(100), unique=True, nullable=False)
-    password = db.Column(db.String(100), nullable=False)
+    password_hash = db.Column(db.String(200), nullable=False)  # Renomme en password_hash
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)  # Méthode pour hacher le mot de passe
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)  # Vérifie le mot de passe haché
 
     def __repr__(self):
         return f'<User {self.username}>'
-
-# N'oublie pas d'importer cette classe dans le fichier run.py si tu l'utilises pour gérer la connexion
-

@@ -1,69 +1,123 @@
-from flask import Flask, jsonify, request, render_template, redirect, url_for, flash
-from . import app
-from .forms import TransactionForm
-from .models import db, Transaction
-from .utils import get_exchange_rate
+from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask_login import login_required, login_user, logout_user, current_user
+from app.models import db, Transaction, User
+from datetime import datetime
+from werkzeug.security import generate_password_hash, check_password_hash
 
-# Route pour la page d'accueil (Dashboard)
-@app.route('/')
+# Création du Blueprint
+routes = Blueprint('routes', __name__)
+
+# Blueprint pour les routes principales
+main_bp = Blueprint('main', __name__)
+
+# Blueprint pour l'authentification
+auth_bp = Blueprint('auth', __name__)
+
+# Blueprint pour les transactions
+transaction_bp = Blueprint('transaction', __name__)
+
+# Page d'accueil (main_bp)
+@main_bp.route('/')
 def index():
-    # Récupérer toutes les transactions depuis la base de données
-    transactions = Transaction.query.all()
-    # Passer les transactions à la page d'accueil (dashboard)
+    return render_template('index.html')
+
+# Tableau de bord des finances (main_bp)
+@main_bp.route('/dashboard')
+@login_required
+def dashboard():
+    transactions = Transaction.query.order_by(Transaction.date.desc()).all()  # Utilisation de Transaction
     return render_template('dashboard.html', transactions=transactions)
-
-# Route pour obtenir toutes les transactions (API GET)
-@app.route('/api/transactions', methods=['GET'])
-def get_transactions():
-    transactions = Transaction.query.all()
-    return jsonify([transaction.to_dict() for transaction in transactions])
-
-# Route pour obtenir les données des transactions pour le graphique (API GET)
-@app.route('/api/chart_data', methods=['GET'])
-def chart_data():
-    # Récupérer toutes les transactions depuis la base de données
-    transactions = Transaction.query.all()
-    # Retourner les données des transactions formatées pour le graphique
-    return jsonify([transaction.to_chart_data() for transaction in transactions])
-
-# Route pour obtenir le taux de change (API GET)
-@app.route('/api/exchange_rate', methods=['GET'])
-def exchange_rate():
-    base_currency = request.args.get('base', 'USD')
-    target_currency = request.args.get('target', 'EUR')
-    rate = get_exchange_rate(base_currency, target_currency)
-    return jsonify({'rate': rate})
-
-# Route pour ajouter une transaction (Formulaire POST)
-@app.route('/add_transaction', methods=['GET', 'POST'])
+# Ajouter une transaction (transaction_bp)
+@routes.route('/add_transaction', methods=['GET', 'POST'])
+@login_required
 def add_transaction():
-    form = TransactionForm()
+    if request.method == 'POST':
+        name = request.form['name']
+        amount = request.form['amount']
+        transaction_type = request.form['transaction_type']
+        currency = request.form['currency']
+        date = request.form['date']
 
-    if form.validate_on_submit():
-        # Récupérer les données du formulaire
-        name = form.name.data
-        amount = form.amount.data
-        transaction_type = form.transaction_type.data
-        currency = form.currency.data
-        date = form.date.data
+        if not name or not amount or not transaction_type or not currency or not date:
+            flash('Tous les champs sont obligatoires.', 'error')
+            return redirect(url_for('routes.add_transaction'))
 
-        # Créer la nouvelle transaction
-        new_transaction = Transaction(
-            name=name,
-            amount=amount,
-            transaction_type=transaction_type,
-            currency=currency,
-            date=date
-        )
+        try:
+            transaction = Transaction(
+                name=name,
+                amount=amount,
+                transaction_type=transaction_type,
+                currency=currency,
+                date=datetime.strptime(date, '%Y-%m-%d')
+            )
+            db.session.add(transaction)
+            db.session.commit()
+            flash('Transaction ajoutée avec succès.', 'success')
+        except Exception as e:
+            flash(f"Erreur lors de l'ajout de la transaction : {e}", 'error')
+            db.session.rollback()
 
-        # Ajouter la transaction à la base de données
-        db.session.add(new_transaction)
-        db.session.commit()
+        return redirect(url_for('routes.dashboard'))
 
-        flash('Transaction ajoutée avec succès!', 'success')
-        return redirect(url_for('add_transaction'))  # Redirige vers la page de création (ou index)
+    return render_template('add_transaction.html')
 
-    return render_template('add_transaction.html', form=form)
+# Connexion utilisateur (auth_bp)
+@auth_bp.route('/login', methods=['GET', 'POST'])
+def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('routes.dashboard'))
 
-if __name__ == '__main__':
-    app.run(debug=True)
+    if request.method == 'POST':
+        email = request.form['email']
+        password = request.form['password']
+        user = User.query.filter_by(email=email).first()
+
+        if user and check_password_hash(user.password_hash, password):
+            login_user(user)
+            flash('Connexion réussie.', 'success')
+            return redirect(url_for('routes.dashboard'))
+        else:
+            flash('Email ou mot de passe incorrect.', 'error')
+
+    return render_template('login.html')
+
+# Déconnexion utilisateur (auth_bp)
+@auth_bp.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    flash('Vous vous êtes déconnecté.', 'success')
+    return redirect(url_for('routes.index'))
+
+# Inscription utilisateur (auth_bp)
+@auth_bp.route('/register', methods=['GET', 'POST'])
+def register():
+    if current_user.is_authenticated:
+        return redirect(url_for('routes.dashboard'))
+
+    if request.method == 'POST':
+        email = request.form['email']
+        password = request.form['password']
+        confirm_password = request.form['confirm_password']
+
+        if password != confirm_password:
+            flash('Les mots de passe ne correspondent pas.', 'error')
+            return redirect(url_for('routes.register'))
+
+        user = User.query.filter_by(email=email).first()
+        if user:
+            flash('Un utilisateur avec cet email existe déjà.', 'error')
+            return redirect(url_for('routes.register'))
+
+        try:
+            password_hash = generate_password_hash(password)
+            new_user = User(email=email, password_hash=password_hash)
+            db.session.add(new_user)
+            db.session.commit()
+            flash('Inscription réussie. Vous pouvez maintenant vous connecter.', 'success')
+            return redirect(url_for('routes.login'))
+        except Exception as e:
+            flash(f"Erreur lors de l'inscription : {e}", 'error')
+            db.session.rollback()
+
+    return render_template('register.html')

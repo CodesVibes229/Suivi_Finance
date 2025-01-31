@@ -9,8 +9,7 @@ class Config:
 
     # Configuration de la base de données (ici SQLite ou MySQL)
     SQLALCHEMY_TRACK_MODIFICATIONS = False  # Pour éviter des avertissements inutiles
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
-                              'mariadb+pymysql://root:ghost@localhost/finances'
+    SQLALCHEMY_DATABASE_URI = 'mariadb+pymysql://root:ghost229@localhost/finances'
     # Configuration de l'API de taux de change (exemple avec 'exchangeratesapi.io')
     EXCHANGE_API_URL = "https://api.exchangeratesapi.io/latest"
     EXCHANGE_API_KEY = os.environ.get('EXCHANGE_API_KEY', 'ta_clé_api')

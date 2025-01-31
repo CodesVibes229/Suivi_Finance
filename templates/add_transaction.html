@@ -3,7 +3,7 @@
 {% block content %}
   <h2>Ajouter une Transaction</h2>
 
-  <form method="POST" action="{{ url_for('add_transaction') }}">
+  <form method="POST" action="{{ url_for('routes.add_transaction') }}">
     {{ form.hidden_tag() }}
 
     <div>
